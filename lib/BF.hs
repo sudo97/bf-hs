@@ -27,9 +27,7 @@ getRuntime input = do
 runBF' :: [BF] -> [Int] -> [Int]
 runBF' bf input = runST $ do
   runtime@(_, output, _, _) <- getRuntime input
-
   act bf runtime
-
   modifySTRef output reverse
   readSTRef output
 
