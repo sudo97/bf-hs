@@ -13,31 +13,21 @@ data BF
 parseBF' :: String -> Maybe [BF]
 parseBF' s = fst <$> parseBF s 0
 
+prepend :: a -> ([a], b) -> ([a], b)
+prepend x (c, xs) = (x : c, xs)
+
 parseBF :: String -> Int -> Maybe ([BF], String)
 parseBF "" 0 = Just ([], "")
 parseBF "" _ = Nothing
 parseBF (x : xs) d = case x of
-  '>' -> do
-    (contents, xs') <- parseBF xs d
-    pure (GoRight : contents, xs')
-  '<' -> do
-    (contents, xs') <- parseBF xs d
-    pure (GoLeft : contents, xs')
-  '+' -> do
-    (contents, xs') <- parseBF xs d
-    pure (Inc : contents, xs')
-  '-' -> do
-    (contents, xs') <- parseBF xs d
-    pure (Dec : contents, xs')
-  ',' -> do
-    (contents, xs') <- parseBF xs d
-    pure (Write : contents, xs')
-  '.' -> do
-    (contents, xs') <- parseBF xs d
-    pure (Read : contents, xs')
+  '>' -> prepend GoRight <$> parseBF xs d
+  '<' -> prepend GoLeft <$> parseBF xs d
+  '+' -> prepend Inc <$> parseBF xs d
+  '-' -> prepend Dec <$> parseBF xs d
+  ',' -> prepend Write <$> parseBF xs d
+  '.' -> prepend Read <$> parseBF xs d
   '[' -> do
     (contents, xs') <- parseBF xs (d + 1)
-    (rest, xs'') <- parseBF xs' d
-    pure (Loop contents : rest, xs'')
+    prepend (Loop contents) <$> parseBF xs' d
   ']' -> if d == 0 then Nothing else Just ([], xs)
   _ -> parseBF xs d
