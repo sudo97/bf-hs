@@ -4,7 +4,6 @@ module BF (runBF) where
 
 import Control.Monad (forM_, when)
 import Control.Monad.ST
-import Data.Array.ST
 import Data.STRef
 import DiffList
 import Parser
