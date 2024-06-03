@@ -79,7 +79,7 @@ library bf-hs-lib
     -- Import common warning flags.
     import:           warnings
 
-    exposed-modules:  BF, Tape, Parser
+    exposed-modules:  BF, Tape, Parser, DiffList
     hs-source-dirs:   lib
     default-language: Haskell2010
 
@@ -92,8 +92,8 @@ library bf-hs-lib
 
 test-suite tests
     type: exitcode-stdio-1.0
-    main-is: BFTest.hs
-    other-modules: TapeTest, ParserTest
+    main-is: Test.hs
+    other-modules: TapeTest, ParserTest, DiffListTest
     build-depends: base ^>=4.19.1.0, HUnit ^>=1.6, bf-hs-lib, array
     hs-source-dirs: tests
     default-language: Haskell2010
