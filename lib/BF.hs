@@ -32,24 +32,24 @@ runBF' bf input = runST $ do
 
   modifySTRef output reverse
   readSTRef output
-  where
-    act :: [BF] -> Runtime s -> ST s ()
-    act chunk runtime@(input', output, arr, idx) = forM_ chunk $ \case
-      Inc -> incr idx arr
-      Dec -> decr idx arr
-      GoLeft -> goLeft idx arr
-      GoRight -> goRight idx arr
-      Write -> do
-        val <- readSTRef input'
-        case val of
-          [] -> putVal (-1) idx arr
-          (x : xs) -> putVal x idx arr *> writeSTRef input' xs
-      Read -> do
-        val <- getVal idx arr
-        modifySTRef output (val :)
-      Loop chunk' -> whileM (isTrue idx arr) (act chunk' runtime)
 
 whileM :: (Monad m) => m Bool -> m a -> m ()
 whileM p f = do
   isit <- p
   when isit $ f *> whileM p f
+
+act :: [BF] -> Runtime s -> ST s ()
+act chunk runtime@(input', output, arr, idx) = forM_ chunk $ \case
+  Inc -> incr idx arr
+  Dec -> decr idx arr
+  GoLeft -> goLeft idx arr
+  GoRight -> goRight idx arr
+  Write -> do
+    val <- readSTRef input'
+    case val of
+      [] -> putVal (-1) idx arr
+      (x : xs) -> putVal x idx arr *> writeSTRef input' xs
+  Read -> do
+    val <- getVal idx arr
+    modifySTRef output (val :)
+  Loop chunk' -> whileM (isTrue idx arr) (act chunk' runtime)
