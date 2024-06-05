@@ -3,6 +3,7 @@
 module BF (runBF) where
 
 import Control.Monad (forM_, when)
+import Control.Monad.Reader
 import Control.Monad.ST
 import Data.STRef
 import DiffList
@@ -17,7 +18,7 @@ runBF source input = do
 runBF' :: [BF] -> [Int] -> [Int]
 runBF' bf input = runST $ do
   runtime@(_, output, _, _) <- getRuntime input
-  act bf runtime
+  runReaderT (act bf) runtime
   toList <$> readSTRef output
 
 whileM :: (Monad m) => m Bool -> m a -> m ()
@@ -25,12 +26,15 @@ whileM p f = do
   isit <- p
   when isit $ f *> whileM p f
 
-act :: [BF] -> Runtime s -> ST s ()
-act chunk runtime = forM_ chunk $ \case
-  Inc -> incr runtime
-  Dec -> decr runtime
-  GoLeft -> goLeft runtime
-  GoRight -> goRight runtime
-  Write -> stdin runtime
-  Read -> stdout runtime
-  Loop chunk' -> whileM (isTrue runtime) (act chunk' runtime)
+act :: [BF] -> ReaderT (Runtime s) (ST s) ()
+act chunk = forM_ chunk mapBFToAction
+
+mapBFToAction :: BF -> ReaderT (Runtime s) (ST s) ()
+mapBFToAction = \case
+  Inc -> incr
+  Dec -> decr
+  GoLeft -> goLeft
+  GoRight -> goRight
+  Write -> stdin
+  Read -> stdout
+  Loop chunk' -> whileM isTrue (act chunk')

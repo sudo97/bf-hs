@@ -2,6 +2,7 @@
 
 module Tape where
 
+import Control.Monad.Reader
 import Control.Monad.ST
 import Data.Array.ST (MArray (getBounds), STArray, modifyArray, newArray, readArray, writeArray)
 import Data.STRef
@@ -11,50 +12,66 @@ type Runtime s = (STRef s [Int], STRef s (DiffList Int), TapeArray s, STRef s In
 
 type TapeArray s = STArray s Int Int
 
-type TapeAction a = forall s. Runtime s -> ST s a
+type TapeAction a s = Runtime s -> ST s a
 
-isTrue :: TapeAction Bool
-isTrue (_, _, arr, idx) = do
-  idx' <- readSTRef idx
-  (/= 0) <$> readArray arr idx'
+type TapeM s a = ReaderT (Runtime s) (ST s) a
 
-incr :: TapeAction ()
-incr (_, _, arr, idx) = do
-  idx' <- readSTRef idx
-  modifyArray arr idx' (+ 1)
+isTrue :: TapeM s Bool
+isTrue = do
+  (_, _, arr, idx) <- ask
+  lift $ do
+    idx' <- readSTRef idx
+    (/= 0) <$> readArray arr idx'
 
-decr :: TapeAction ()
-decr (_, _, arr, idx) = do
-  idx' <- readSTRef idx
-  modifyArray arr idx' (subtract 1)
+incr :: TapeM s ()
+incr = do
+  (_, _, arr, idx) <- ask
+  lift $ do
+    idx' <- readSTRef idx
+    modifyArray arr idx' (+ 1)
 
-goRight :: TapeAction ()
-goRight (_, _, arr, idxRef) = do
-  (min', max') <- getBounds arr
-  idx <- readSTRef idxRef
-  if idx < max' then modifySTRef idxRef (+ 1) else writeSTRef idxRef min'
+decr :: TapeM s ()
+decr = do
+  (_, _, arr, idx) <- ask
+  lift $ do
+    idx' <- readSTRef idx
+    modifyArray arr idx' (subtract 1)
 
-goLeft :: TapeAction ()
-goLeft (_, _, arr, idxRef) = do
-  (min', max') <- getBounds arr
-  idx <- readSTRef idxRef
-  if idx > min' then modifySTRef idxRef (subtract 1) else writeSTRef idxRef max'
+goRight :: TapeM s ()
+goRight = do
+  (_, _, arr, idxRef) <- ask
+  lift $ do
+    (min', max') <- getBounds arr
+    idx <- readSTRef idxRef
+    if idx < max' then modifySTRef idxRef (+ 1) else writeSTRef idxRef min'
 
-stdin :: TapeAction ()
-stdin (inp, _, arr, idxRef) = do
-  inp' <- readSTRef inp
-  case inp' of
-    [] -> error "No input"
-    x : xs -> do
-      writeSTRef inp xs
-      idx <- readSTRef idxRef
-      writeArray arr idx x
+goLeft :: TapeM s ()
+goLeft = do
+  (_, _, arr, idxRef) <- ask
+  lift $ do
+    (min', max') <- getBounds arr
+    idx <- readSTRef idxRef
+    if idx > min' then modifySTRef idxRef (subtract 1) else writeSTRef idxRef max'
 
-stdout :: TapeAction ()
-stdout (_, out, arr, idxRef) = do
-  idx <- readSTRef idxRef
-  val <- readArray arr idx
-  modifySTRef out (appendItem val)
+stdin :: TapeM s ()
+stdin = do
+  (inp, _, arr, idxRef) <- ask
+  lift $ do
+    inp' <- readSTRef inp
+    case inp' of
+      [] -> error "No input"
+      x : xs -> do
+        writeSTRef inp xs
+        idx <- readSTRef idxRef
+        writeArray arr idx x
+
+stdout :: TapeM s ()
+stdout = do
+  (_, out, arr, idxRef) <- ask
+  lift $ do
+    idx <- readSTRef idxRef
+    val <- readArray arr idx
+    modifySTRef out (appendItem val)
 
 getRuntime :: [Int] -> ST s (Runtime s)
 getRuntime input = do
